@@ -1,10 +1,12 @@
 # Quartier Libre
 
-Mon premier jeu : un jeu d'action en monde ouvert, vue de dessus, dans un quartier français fictif (Bellerive-sur-Seine).
+Mon premier jeu : un jeu d'action en monde ouvert en 3D, façon GTA 3, dans un quartier français fictif (Bellerive-sur-Seine).
 
 ## Jouer
 
-Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Aucun téléchargement ni installation.
+Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Il faut une connexion internet au premier lancement pour charger le moteur 3D (Three.js).
+
+`classique.html` contient la première version, en vue de dessus.
 
 ## Ce qu'il y a dedans
 
@@ -23,7 +25,8 @@ Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Aucun téléc
 | Touche | Action |
 | --- | --- |
 | ZQSD / Flèches | Marcher, conduire |
-| Souris + clic | Viser, tirer, frapper |
+| Souris | Tourner la caméra |
+| Clic | Tirer, frapper (visée automatique) |
 | E | Voler / quitter une voiture |
 | Espace | Frein à main |
 | Maj | Courir |
