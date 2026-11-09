@@ -1,1 +1,34 @@
-# 1er-jeux
+# Quartier Libre
+
+Mon premier jeu : un jeu d'action en monde ouvert, vue de dessus, dans un quartier français fictif (Bellerive-sur-Seine).
+
+## Jouer
+
+Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Aucun téléchargement ni installation.
+
+## Ce qu'il y a dedans
+
+- Une ville de 64 pâtés de maisons : Centre-Ville haussmannien, Cité des Tilleuls, Les Docks, Les Pavillons
+- Trafic qui roule à droite et tourne aux carrefours, piétons sur les trottoirs et les passages piétons
+- Vol de voitures (7 modèles), dérapages au frein à main, dégâts, incendies et explosions
+- Police avec niveau de recherche (1 à 5 étoiles), sirène « pin-pon », poursuites et arrestations
+- Armes : poings, pistolet, mitraillette, fusil à pompe, et une armurerie
+- Garage Peinture Express pour semer les flics, hôpital, commissariat
+- 6 missions de Momo, le patron du kebab
+- Cycle jour/nuit avec réverbères et phares, deux radios (Radio Bitume et Accordéon FM)
+- Contrôles tactiles sur téléphone, sauvegarde automatique
+
+## Commandes
+
+| Touche | Action |
+| --- | --- |
+| ZQSD / Flèches | Marcher, conduire |
+| Souris + clic | Viser, tirer, frapper |
+| E | Voler / quitter une voiture |
+| Espace | Frein à main |
+| Maj | Courir |
+| Molette / 1-4 | Changer d'arme |
+| R | Changer de radio |
+| H | Klaxon |
+| M | Carte |
+| P / Échap | Pause |
