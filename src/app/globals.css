@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f6f1e9;
+  --surface: #fffdf9;
+  --surface-2: #efe8dd;
+  --ink: #1c1917;
+  --muted: #6b635a;
+  --line: #e2d9cb;
+  --a: #4f46e5;
+  --a-soft: #e6e4ff;
+  --b: #e8590c;
+  --b-soft: #ffe6d6;
+  --ok: #15803d;
+  --danger: #b42318;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121110;
+    --surface: #1c1a18;
+    --surface-2: #262320;
+    --ink: #f3eee7;
+    --muted: #a39a8f;
+    --line: #34302b;
+    --a: #8f89ff;
+    --a-soft: #25234a;
+    --b: #ff8a4c;
+    --b-soft: #3d2416;
+    --ok: #4ade80;
+    --danger: #f97066;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #121110;
+  --surface: #1c1a18;
+  --surface-2: #262320;
+  --ink: #f3eee7;
+  --muted: #a39a8f;
+  --line: #34302b;
+  --a: #8f89ff;
+  --a-soft: #25234a;
+  --b: #ff8a4c;
+  --b-soft: #3d2416;
+  --ok: #4ade80;
+  --danger: #f97066;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-a: var(--a);
+  --color-a-soft: var(--a-soft);
+  --color-b: var(--b);
+  --color-b-soft: var(--b-soft);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+@keyframes apparition {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.apparition { animation: apparition 0.35s ease-out both; }
+
+@keyframes pulse-doux {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.pulse-doux { animation: pulse-doux 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .apparition, .pulse-doux { animation: none; }
+}
