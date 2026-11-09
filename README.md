@@ -10,6 +10,12 @@ Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Il faut une c
 
 ## Ce qu'il y a dedans
 
+- Rendu réaliste : ciel dynamique, ombres en temps réel, reflets, effet de lueur la nuit, pluie et orages
+- Personnages articulés avec visages et vêtements variés, voitures aux carrosseries arrondies et peinture métallisée
+- Mobilier urbain parisien : potelets, colonnes Morris, entrée de métro, poubelles, bancs, platanes
+- Radio « Ma musique » pour écouter tes propres fichiers audio en voiture
+- Réglage de qualité (haute, moyenne, basse) dans le menu
+
 - Une ville de 64 pâtés de maisons : Centre-Ville haussmannien, Cité des Tilleuls, Les Docks, Les Pavillons
 - Trafic qui roule à droite et tourne aux carrefours, piétons sur les trottoirs et les passages piétons
 - Vol de voitures (7 modèles), dérapages au frein à main, dégâts, incendies et explosions
@@ -17,7 +23,7 @@ Ouvre `index.html` dans un navigateur (ordinateur ou téléphone). Il faut une c
 - Armes : poings, pistolet, mitraillette, fusil à pompe, et une armurerie
 - Garage Peinture Express pour semer les flics, hôpital, commissariat
 - 6 missions de Momo, le patron du kebab
-- Cycle jour/nuit avec réverbères et phares, deux radios (Radio Bitume et Accordéon FM)
+- Cycle jour/nuit avec réverbères et phares, radios Ténèbres FM, Radio Bitume et Accordéon FM
 - Contrôles tactiles sur téléphone, sauvegarde automatique
 
 ## Commandes
