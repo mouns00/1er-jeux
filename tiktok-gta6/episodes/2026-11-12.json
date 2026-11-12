@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-12",
+  "title": "J-7 : ta console n'est pas prête",
+  "caption": "GTA 6 sort dans 7 jours et il pèse jusqu'à 212 Go 😳 Ta console est prête ? Abonne-toi : 1 info GTA 6 par jour jusqu'à la sortie.",
+  "hashtags": ["gta6", "gtavi", "rockstargames", "ps5", "xbox", "gaming", "jeuxvideo", "actugaming"],
+  "voiceover": "Ta console n'est pas prête pour GTA 6. Le jeu sort dans sept jours, le 19 novembre. Et Rockstar l'a confirmé : il pèse jusqu'à 212 gigas. C'est presque un tiers du SSD d'une PS5 de lancement. Le préchargement est déjà ouvert depuis le 10 novembre. Sur PS5, le jeu se débloque à minuit pile, dans la nuit du 18 au 19. Et sur PC ? Toujours aucune version annoncée. Alors fais de la place maintenant. Abonne-toi : une info GTA 6 par jour.",
+  "sources": [
+    "Taille (jusqu'à 212 Go) et préchargement : annonce Rockstar du 3 novembre, relayée par Forbes — https://www.forbes.com/sites/paultassi/2026/11/03/gta-6-pre-load-date-and-time-revealed-huge-file-size-confirmed/",
+    "Préchargement et heure de déblocage en France : https://www.jeuxvideo.com/news/2113342/quand-et-comment-pre-telecharger-gta-6-toutes-les-infos-sur-ps5-et-xbox-series.htm",
+    "Date de sortie : https://www.rockstargames.com/newswire/article/ak3ak31a49a221/grand-theft-auto-vi-is-now-set-to-launch-november-19-2026",
+    "Non vérifié à la source ce jour-là (donc absent de la vidéo) : le 30 fps sur consoles."
+  ],
+  "slides": [
+    {"kicker": "INFO GTA 6 • 12 NOV", "big": "TA CONSOLE\nN'EST PAS\nPRÊTE", "accent": "red", "duration": 2.6},
+    {"kicker": "COMPTE À REBOURS", "big": "J-7", "sub": "Sortie le 19 novembre 2026", "accent": "pink", "duration": 2.8, "size": 420},
+    {"kicker": "TAILLE OFFICIELLE", "big": "{n} GO", "count": 212, "sub": "Jusqu'à 212 Go selon la console", "source": "Source : Rockstar Games", "accent": "yellow", "duration": 3.6, "size": 330},
+    {"kicker": "CONCRÈTEMENT", "big": "PRESQUE\n1/3\nDE TA PS5", "sub": "SSD d'une PS5 de lancement :\n667 Go utilisables", "accent": "cyan", "duration": 3.4},
+    {"kicker": "DÉJÀ DISPO", "big": "PRÉCHARGE\nMAINTENANT", "sub": "Ouvert depuis le 10 novembre", "accent": "green", "duration": 3.0},
+    {"kicker": "HEURE DE SORTIE PS5", "big": "MINUIT\nPILE", "sub": "Nuit du 18 au 19 novembre", "source": "Source : PlayStation Store", "accent": "pink", "duration": 3.2},
+    {"kicker": "ET SUR PC ?", "big": "TOUJOURS\nRIEN", "sub": "Aucune version PC annoncée", "accent": "red", "duration": 2.8},
+    {"kicker": "CHAQUE JOUR", "big": "ABONNE-TOI", "sub": "1 info GTA 6 par jour", "accent": "yellow", "duration": 2.6}
+  ]
+}
