@@ -22,7 +22,15 @@
   "Voix : ElevenLabs (voix « Richie Tekan ») via Speko"
  ],
  "voice": "voice/2026-11-12b.wav",
- "presenter": "presenter.png",
+ "presenter": {
+  "file": "presenter.png",
+  "mouth": [
+   658,
+   468,
+   70
+  ],
+  "chin": 690
+ },
  "words": [
   [
    "Rockstar",
@@ -468,11 +476,9 @@
    "start": 3.45,
    "kicker": "C'EST CONFIRMÉ",
    "big": "30 FPS",
-   "size": 300,
    "accent": "yellow",
    "bg": "gta6-logo.jpg",
-   "focus": 0.8,
-   "source": "Source : Rockstar Games"
+   "focus": 0.8
   },
   {
    "start": 6.45,
@@ -520,8 +526,7 @@
    "big": "« VISER »\n30 FPS",
    "accent": "yellow",
    "bg": "gta6-logo.jpg",
-   "focus": 0.5,
-   "source": "Source : Rockstar Games"
+   "focus": 0.5
   },
   {
    "start": 22.8,

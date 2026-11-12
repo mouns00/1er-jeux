@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Format « présentateur » : images en fond, présentateur en médaillon, voix off
-et sous-titres synchronisés en bas. Pas de musique (à ajouter dans TikTok).
+"""Format « présentateur » : image du jeu en plein écran, tête du présentateur qui
+parle en haut à gauche, voix off et sous-titres synchronisés en bas.
+Pas de musique (à ajouter dans TikTok).
 
 Usage : python3 tiktok-gta6/talk.py tiktok-gta6/episodes/<fichier>.json
 
 L'épisode fournit :
   voice   chemin du .wav de la voix off (relatif à tiktok-gta6/)
   words   [[mot, début_s, fin_s], ...] : minutage mot à mot de la voix
-  scenes  [{start, kicker, big, accent, bg, focus, source}] : titres et fonds
-  presenter (optionnel) image du présentateur ; absente = pas de médaillon
+  scenes  [{start, kicker, big, accent, bg, focus}] : titres et fonds.
+          bg est une image ou une vidéo de tiktok-gta6/media/.
+  presenter (optionnel) {file, mouth: [x, y, demi-largeur], chin: y} en pixels de la photo
 """
 import json
 import math
@@ -18,95 +20,140 @@ import sys
 import wave
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance
 
 from generate import (ACCENTS, FPS, H, SAFE_L, SAFE_R, SAFE_T, W, ease_out, fit_text, font,
                       make_background, paste_center, pill, render_block, write_post_text)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CX = (SAFE_L + SAFE_R) // 2
-SUB_Y = 1455          # centre des sous-titres, au-dessus de l'interface TikTok
-FACE = 210            # côté du médaillon présentateur
-FACE_Y = 1268
+SUB_Y = 1440          # centre des sous-titres, au-dessus de l'interface TikTok
+SUB_SIZE = 62
+FACE = 250            # côté du carré présentateur
+FACE_X, FACE_Y = 60, 245   # coin haut-gauche du carré
 TAIL = 0.5            # silence final
+VIDEO_EXT = (".mp4", ".mov", ".webm", ".mkv")
+MOUTH_STEPS = 13      # nombre d'ouvertures de bouche précalculées
+MOUTH_MAX = 26        # ouverture maximale, en pixels de la photo d'origine
 
 
-CARD_W, CARD_H, CARD_Y = 870, 580, 660   # image du jeu : carte nette en haut
+# ------------------------------------------------------------------ fonds
 
 
-def load_bg(name, accent):
-    """Renvoie (fond flouté plein écran, image source nette pour la carte)."""
-    path = os.path.join(HERE, "media", name) if name else None
-    if not path or not os.path.exists(path):
-        return make_background(accent).convert("RGBA"), None
-    src = Image.open(path).convert("RGB")
-    scale = max(W / src.width, H / src.height)
-    full = src.resize((int(src.width * scale) + 1, int(src.height * scale) + 1), Image.BILINEAR)
-    x = (full.width - W) // 2
-    full = full.crop((x, 0, x + W, H)).filter(ImageFilter.GaussianBlur(28))
-    return ImageEnhance.Brightness(full).enhance(0.45).convert("RGBA"), src
+class Background:
+    """Fond plein écran : image avec travelling lent, ou vidéo lue en boucle."""
 
+    def __init__(self, name, accent):
+        path = os.path.join(HERE, "media", name) if name else None
+        self.video = None
+        if path and os.path.exists(path) and path.lower().endswith(VIDEO_EXT):
+            self.video = subprocess.Popen(
+                ["ffmpeg", "-loglevel", "error", "-stream_loop", "-1", "-i", path, "-an",
+                 "-vf", f"fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},eq=brightness=-0.06",
+                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+            return
+        if path and os.path.exists(path):
+            img = Image.open(path).convert("RGB")
+        else:
+            img = make_background(accent)
+        scale = max(W * 1.2 / img.width, H * 1.2 / img.height)
+        img = img.resize((int(img.width * scale) + 1, int(img.height * scale) + 1), Image.LANCZOS)
+        self.img = ImageEnhance.Brightness(img).enhance(0.85)
 
-CARD_MASK = Image.new("L", (CARD_W, CARD_H), 0)
-ImageDraw.Draw(CARD_MASK).rounded_rectangle([0, 0, CARD_W - 1, CARD_H - 1], radius=44, fill=255)
-
-
-def card_frame(src, focus, t, dur, idx):
-    """Carte avec zoom lent (avant ou arrière selon la scène), cadrée sur `focus` (0..1)."""
-    p = min(1.0, t / max(dur, 0.01))
-    z = 1.04 + 0.14 * (p if idx % 2 == 0 else 1 - p)
-    ch = min(src.height, src.width * CARD_H / CARD_W) / z
-    cw = ch * CARD_W / CARD_H
-    x = min(max(focus * src.width - cw / 2 + (p - 0.5) * 40, 0), src.width - cw)
-    y = (src.height - ch) / 2
-    card = src.resize((CARD_W, CARD_H), Image.BILINEAR, box=(x, y, x + cw, y + ch)).convert("RGBA")
-    card.putalpha(CARD_MASK)
-    return card
+    def frame(self, focus, t, dur, idx):
+        if self.video:
+            raw = self.video.stdout.read(W * H * 3)
+            return Image.frombytes("RGB", (W, H), raw).convert("RGBA")
+        p = min(1.0, t / max(dur, 0.01))
+        z = 1.0 + 0.12 * (p if idx % 2 == 0 else 1 - p)
+        cw, ch = W * 1.14 / z, H * 1.14 / z
+        drift = (p - 0.5) * 120 * (1 if idx % 2 == 0 else -1)
+        x = min(max(focus * self.img.width - cw / 2 + drift, 0), self.img.width - cw)
+        y = (self.img.height - ch) / 2
+        return self.img.resize((W, H), Image.BILINEAR, box=(x, y, x + cw, y + ch)).convert("RGBA")
 
 
 def shade():
-    """Assombrit le bas pour que les sous-titres restent lisibles sur n'importe quel fond."""
-    a = np.zeros((H, W), dtype=np.uint8)
-    ramp = np.clip((np.arange(H) - 900) / 500, 0, 1) * 185
-    a[:] = ramp[:, None].astype(np.uint8)
+    """Assombrit le haut et le bas pour garder titres et sous-titres lisibles."""
+    y = np.arange(H)
+    a = np.clip((y - 1050) / 450, 0, 1) * 190 + np.clip((560 - y) / 400, 0, 1) * 150
     img = Image.new("RGBA", (W, H), (8, 4, 22, 0))
-    img.putalpha(Image.fromarray(a))
+    img.putalpha(Image.fromarray(np.repeat(a[:, None], W, axis=1).astype(np.uint8)))
     return img
 
 
-def presenter_tile(path):
-    img = Image.open(path).convert("RGB")
-    s = min(img.size)
-    # Cadrage serré sur le visage (portrait centré, tête dans les deux tiers hauts).
+# ------------------------------------------------------------ présentateur
+
+
+def mouth_states(cfg):
+    """Précalcule le carré présentateur pour chaque ouverture de bouche.
+
+    La mâchoire est étirée vers le bas sous la ligne des lèvres et l'intérieur de
+    la bouche est peint dans l'ouverture : la bouche suit ainsi le volume de la voix.
+    """
+    src = np.asarray(Image.open(os.path.join(HERE, "media", cfg["file"])).convert("RGB")).astype(np.float32)
+    h, w = src.shape[:2]
+    mx, my, hw = cfg["mouth"]
+    chin = cfg["chin"]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    lip = my - 4 * ((xx - mx) / hw) ** 2            # ligne des lèvres, légèrement courbée
+    side = np.clip(1 - ((xx - mx) / hw) ** 2, 0, 1)
+    states = []
+    s = min(h, w)
     box = (int(s * 0.17), int(s * 0.01), int(s * 0.83), int(s * 0.67))
-    img = img.crop(box).resize((FACE, FACE), Image.LANCZOS)
     mask = Image.new("L", (FACE, FACE), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, FACE - 1, FACE - 1], radius=50, fill=255)
-    out = img.convert("RGBA")
-    out.putalpha(mask)
-    return out
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, FACE - 1, FACE - 1], radius=36, fill=255)
+    for k in range(MOUTH_STEPS):
+        o = MOUTH_MAX * k / (MOUTH_STEPS - 1)
+        jaw = o * np.exp(-((xx - mx) / (hw * 1.25)) ** 2)      # descente de la mâchoire
+        gap = o * np.sqrt(side)                                 # ouverture entre les lèvres
+        below = yy - lip
+        ramp = np.clip(below / (jaw + 4), 0, 1)
+        fade = np.clip((chin - yy) / np.maximum(chin - lip - jaw - 4, 1), 0, 1)
+        shift = jaw * ramp * fade
+        sy = np.clip(yy - shift, 0, h - 1)
+        y0 = np.floor(sy).astype(np.int32)
+        y1 = np.minimum(y0 + 1, h - 1)
+        fy = (sy - y0)[..., None]
+        xi = xx.astype(np.int32)
+        out = src[y0, xi] * (1 - fy) + src[y1, xi] * fy
+        if o > 0:
+            inside = np.clip(np.minimum(below, gap - below) / 2.0, 0, 1) * (gap > 1)
+            depth = np.clip(below / np.maximum(gap, 1), 0, 1)[..., None]
+            interior = np.array([52, 16, 18], np.float32) * (1 - depth) + np.array([24, 6, 8], np.float32) * depth
+            teeth = (np.clip((gap * 0.24 - below) / 2.0, 0, 1) * np.clip(side * 1.6 - 0.5, 0, 1) * (below > 0) * min(1, o / 12))[..., None]
+            interior = interior * (1 - teeth * 0.45) + np.array([200, 190, 182], np.float32) * teeth * 0.45
+            out = out * (1 - inside[..., None]) + interior * inside[..., None]
+        tile = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).crop(box).resize((FACE, FACE), Image.LANCZOS).convert("RGBA")
+        tile.putalpha(mask)
+        states.append(tile)
+    return states
 
 
 def voice_envelope(path, n_frames):
-    """Volume de la voix image par image (0..1), pour animer le médaillon."""
+    """Ouverture de bouche image par image (0..1) à partir du volume de la voix."""
     with wave.open(path) as w:
         sr = w.getframerate()
         x = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(float)
         if w.getnchannels() == 2:
             x = x[::2]
-        dur = len(x) / sr
     env = np.zeros(n_frames)
     hop = sr // FPS
     for i in range(min(n_frames, len(x) // hop)):
         env[i] = np.sqrt(np.mean(x[i * hop:(i + 1) * hop] ** 2))
-    env = env / (np.percentile(env, 95) + 1e-9)
-    env = np.clip(env, 0, 1)
-    for i in range(1, n_frames):  # retombée douce
-        env[i] = max(env[i], env[i - 1] * 0.8)
-    return env, dur
+    env = np.clip(env / (np.percentile(env, 92) + 1e-9), 0, 1)
+    env[env < 0.12] = 0
+    out = np.zeros(n_frames)
+    for i in range(1, n_frames):  # ouverture rapide, fermeture un peu plus douce
+        target = env[i] ** 0.75
+        out[i] = out[i - 1] + (target - out[i - 1]) * (0.75 if target > out[i - 1] else 0.5)
+    return out
 
 
-def chunk_words(words, max_chars=17, max_words=3):
+# ------------------------------------------------------------ sous-titres
+
+
+def chunk_words(words, max_chars=20, max_words=4):
     """Regroupe les mots en sous-titres courts, coupés à la ponctuation."""
     chunks, cur = [], []
     for w in words:
@@ -129,16 +176,18 @@ def render_sub(chunk, active, f):
     space = f.getlength(" ")
     widths = [f.getlength(t) for t in texts]
     asc, desc = f.getmetrics()
-    pad = 30
+    pad = 24
     img = Image.new("RGBA", (int(sum(widths) + space * (len(texts) - 1)) + 2 * pad, asc + desc + 2 * pad), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     x = pad
     for i, t in enumerate(texts):
         fill = (255, 225, 0, 255) if i == active else (255, 255, 255, 255)
-        d.text((x + 5, pad + 6), t, font=f, fill=(0, 0, 0, 255), stroke_width=12, stroke_fill=(0, 0, 0, 255))
-        d.text((x, pad), t, font=f, fill=fill, stroke_width=10, stroke_fill=(0, 0, 0, 255))
+        d.text((x, pad), t, font=f, fill=fill, stroke_width=8, stroke_fill=(0, 0, 0, 255))
         x += widths[i] + space
     return img
+
+
+# ------------------------------------------------------------------ rendu
 
 
 def main():
@@ -153,24 +202,32 @@ def main():
     with wave.open(voice) as w:
         total = w.getnframes() / w.getframerate() + TAIL
     n_frames = int(round(total * FPS))
-    env, _ = voice_envelope(voice, n_frames)
+    env = voice_envelope(voice, n_frames)
+
+    pres = ep.get("presenter")
+    tiles = None
+    if pres and os.path.exists(os.path.join(HERE, "media", pres["file"])):
+        tiles = mouth_states(pres)
+    text_x = FACE_X + FACE + 34 if tiles else SAFE_L
+    text_w = SAFE_R - text_x
 
     scenes = ep["scenes"]
+    backgrounds = {}
     for i, s in enumerate(scenes):
         s["end"] = scenes[i + 1]["start"] if i + 1 < len(scenes) else total
         s["rgb"] = ACCENTS[s.get("accent", "pink")]
         lines = s["big"].split("\n")
-        s["layer"] = render_block(lines, fit_text(lines, "black", SAFE_R - SAFE_L - 40, s.get("size", 135)),
-                                  (255, 255, 255, 255), s["rgb"], stroke=11)
-        s["pill"] = pill(s["kicker"], s["rgb"]) if s.get("kicker") else None
-        s["src"] = render_block([s["source"]], font("bold", 32), (255, 255, 255, 235), (0, 0, 0), stroke=5) if s.get("source") else None
-        s["img"], s["card"] = load_bg(s.get("bg"), s["rgb"])
+        s["layer"] = render_block(lines, fit_text(lines, "black", text_w - 60, s.get("size", 84), 40),
+                                  (255, 255, 255, 255), s["rgb"], stroke=7)
+        s["pill"] = pill(s["kicker"], s["rgb"], size=30) if s.get("kicker") else None
+        key = s.get("bg")
+        if key not in backgrounds:
+            backgrounds[key] = Background(key, s["rgb"])
+        s["bgobj"] = backgrounds[key]
 
     chunks = chunk_words(ep["words"])
-    f_sub = font("black", 88)
-    sub_w = SAFE_R - SAFE_L + 60
-    ppath = os.path.join(HERE, "media", ep["presenter"]) if ep.get("presenter") else None
-    tile = presenter_tile(ppath) if ppath and os.path.exists(ppath) else None
+    f_sub = font("black", SUB_SIZE)
+    sub_w = SAFE_R - SAFE_L + 40
     dark = shade()
 
     silent = base + ".silent.mp4"
@@ -185,34 +242,32 @@ def main():
             si += 1
         s = scenes[si]
         ts = t - s["start"]
-        frame = s["img"].copy()
+        frame = s["bgobj"].frame(s.get("focus", 0.5), ts, s["end"] - s["start"], si)
         frame.alpha_composite(dark)
         d = ImageDraw.Draw(frame)
-        if s["card"] is not None:
-            x0, y0 = CX - CARD_W // 2, CARD_Y - CARD_H // 2
-            d.rounded_rectangle([x0 - 8, y0 - 8, x0 + CARD_W + 7, y0 + CARD_H + 7], radius=52, fill=s["rgb"] + (255,))
-            frame.alpha_composite(card_frame(s["card"], s.get("focus", 0.5), ts, s["end"] - s["start"], si), (x0, y0))
-        # Barre de progression continue.
         by = SAFE_T - 50
-        d.rounded_rectangle([SAFE_L, by, SAFE_R, by + 10], radius=5, fill=(255, 255, 255, 80))
-        d.rounded_rectangle([SAFE_L, by, SAFE_L + max(10, (SAFE_R - SAFE_L) * t / total), by + 10], radius=5, fill=s["rgb"] + (255,))
-        if s["pill"]:
-            k = ease_out(ts / 0.25)
-            paste_center(frame, s["pill"], CX, SAFE_T + 60 - (1 - k) * 60, alpha=k)
+        d.rounded_rectangle([SAFE_L, by, SAFE_R, by + 8], radius=4, fill=(255, 255, 255, 80))
+        d.rounded_rectangle([SAFE_L, by, SAFE_L + max(8, (SAFE_R - SAFE_L) * t / total), by + 8], radius=4, fill=s["rgb"] + (255,))
+        if tiles:
+            # Léger mouvement de tête : respiration lente + petit hochement sur la voix.
+            bob = 3 * math.sin(t * 1.7) + 4 * env[n]
+            ang = 1.2 * math.sin(t * 0.9) + 0.8 * math.sin(t * 2.3)
+            d.rounded_rectangle([FACE_X - 6, FACE_Y - 6, FACE_X + FACE + 5, FACE_Y + FACE + 5], radius=42, fill=(255, 255, 255, 255))
+            tile = tiles[int(round(env[n] * (MOUTH_STEPS - 1)))]
+            inner = Image.new("RGBA", (FACE, FACE), (20, 22, 30, 255))
+            moved = tile.resize((int(FACE * 1.08), int(FACE * 1.08)), Image.BILINEAR).rotate(ang, Image.BILINEAR)
+            inner.alpha_composite(moved, (-int(FACE * 0.04), -int(FACE * 0.04) + int(bob)))
+            inner.putalpha(tiles[0].getchannel("A"))
+            frame.alpha_composite(inner, (FACE_X, FACE_Y))
         p = ease_out(ts / 0.25)
-        paste_center(frame, s["layer"], CX, 1010, scale=1.5 - 0.5 * p, alpha=min(1, ts / 0.08 + 0.3))
-        if s["src"] and ts > 0.5:
-            paste_center(frame, s["src"], CX, CARD_Y - CARD_H // 2 + 36, alpha=ease_out((ts - 0.5) / 0.3))
-        if tile:
-            a = env[n]
-            ring = 10 + int(16 * a)
-            half = FACE // 2 + ring
-            d.rounded_rectangle([CX - half, FACE_Y - half, CX + half, FACE_Y + half], radius=50 + ring,
-                                fill=s["rgb"] + (int(120 + 135 * a),))
-            d.rounded_rectangle([CX - FACE // 2 - 6, FACE_Y - FACE // 2 - 6, CX + FACE // 2 + 6, FACE_Y + FACE // 2 + 6],
-                                radius=56, fill=(255, 255, 255, 255))
-            paste_center(frame, tile, CX, FACE_Y + 4 * math.sin(t * 2.2), scale=1.0)
-        # Sous-titre courant.
+        if s["pill"]:
+            frame.alpha_composite(s["pill"], (text_x, FACE_Y - 2))
+        layer = s["layer"]
+        if p < 1:
+            a = layer.getchannel("A").point(lambda v: int(v * (0.3 + 0.7 * p)))
+            layer = layer.copy()
+            layer.putalpha(a)
+        frame.alpha_composite(layer, (text_x - 24 + int((1 - p) * 60), FACE_Y + 58))
         cur = None
         for ch in chunks:
             if ch[0][1] - 0.05 <= t:
@@ -220,14 +275,16 @@ def main():
         if cur and t < cur[-1][2] + 0.35:
             active = max((i for i, w in enumerate(cur) if t >= w[1] - 0.03), default=0)
             sub = render_sub(cur, active, f_sub)
-            sc = min(1.0, sub_w / sub.width) * (0.8 + 0.2 * ease_out((t - cur[0][1] + 0.05) / 0.12))
-            paste_center(frame, sub, CX, SUB_Y, scale=sc)
-        if ts < 0.1 and si > 0:
-            frame = Image.blend(frame, Image.new("RGBA", (W, H), (255, 255, 255, 255)), 0.45 * (1 - ts / 0.1))
+            sc = min(1.0, sub_w / sub.width) * (0.88 + 0.12 * ease_out((t - cur[0][1] + 0.05) / 0.12))
+            paste_center(frame, sub, CX + 60, SUB_Y, scale=sc)
         proc.stdin.write(frame.convert("RGB").tobytes())
     proc.stdin.close()
     if proc.wait() != 0:
         raise RuntimeError("ffmpeg a échoué pendant l'encodage vidéo")
+    for b in backgrounds.values():
+        if b.video:
+            b.video.kill()
+    # Voix seule, sans effet ni réverbération : simple mise à niveau du volume.
     subprocess.run(
         ["ffmpeg", "-y", "-loglevel", "error", "-i", silent, "-i", voice, "-c:v", "copy",
          "-af", f"loudnorm=I=-14:TP=-1.5:LRA=11,apad=pad_dur={TAIL}", "-ar", "44100", "-c:a", "aac", "-b:a", "192k",
